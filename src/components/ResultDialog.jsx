@@ -1,19 +1,21 @@
 import { useEffect, useRef } from 'react'
 import { COMPUTER, DRAW, IN_PROGRESS } from '../game.js'
 
-function ResultDialog({ game, scoreboard, onPlayAgain }) {
+function ResultDialog({ game, scoreboard, enabled, onPlayAgain }) {
   const dialogRef = useRef(null)
 
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
 
-    if (game.status !== IN_PROGRESS && !dialog.open) {
+    if (enabled && game.status !== IN_PROGRESS && !dialog.open) {
       dialog.showModal()
     } else if (game.status === IN_PROGRESS && dialog.open) {
       dialog.close()
+    } else if (!enabled && dialog.open) {
+      dialog.close()
     }
-  }, [game.status])
+  }, [enabled, game.status])
 
   const isDraw = game.status === DRAW
   const computerWon = game.mode === COMPUTER && game.winner === 'O'
