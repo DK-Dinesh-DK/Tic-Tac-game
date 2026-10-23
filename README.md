@@ -25,8 +25,6 @@ This version is a React-only application. It does not require Angular or a
   mode
 - Session scoreboard for X wins, O wins, and draws
 - Separate new-game and reset-scoreboard actions
-- Game, mode, move history, and scoreboard saved in browser local storage
-- Resume-or-start-fresh prompt when a previous session is available
 - Responsive layout and keyboard-accessible controls
 
 ## Run locally
@@ -55,13 +53,8 @@ scoreboard updates, and the computer move priorities.
 
 ## Design decisions and assumptions
 
-- Game state and the session scoreboard are saved to browser local storage, so
-  refreshes and browser restarts can resume the previous session.
-- On a new visit with saved data, choose whether to continue it or start fresh.
-- When leaving after making progress, the browser may show its native
-  leave/stay confirmation. Browsers do not allow websites to customize that
-  prompt or add custom keep/delete actions; the app saves progress
-  automatically and asks whether to restore it on the next visit.
+- Game state and the session scoreboard are held in React memory. Reloading the
+  page starts a fresh game and scoreboard.
 - The computer always plays O; the human plays X.
 - A game mode change starts a fresh board but keeps the scoreboard.
 - Undo follows clarification Option A: it is disabled after a win or draw, so
@@ -81,8 +74,7 @@ logic functions with unit tests, plus React for rendering and interaction.
 
 ## Limitations and future improvements
 
-- Data is local to this browser profile and does not synchronize across
-  browsers or devices.
+- Scores do not persist across page reloads or synchronize across browsers.
 - There is no server API, database, online multiplayer, or player-name
   management.
 - Future work could add persistence, multiplayer, configurable difficulty, and

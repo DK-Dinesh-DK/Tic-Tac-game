@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 import {
   appReducer,
   chooseComputerMove,
@@ -6,7 +6,6 @@ import {
   createAppState,
   DRAW,
   IN_PROGRESS,
-  TWO_PLAYER,
   WON,
 } from './game.js'
 import GameBoard from './components/GameBoard.jsx'
@@ -14,34 +13,10 @@ import GameModeSelector from './components/GameModeSelector.jsx'
 import MoveHistory from './components/MoveHistory.jsx'
 import ResultDialog from './components/ResultDialog.jsx'
 import Scoreboard from './components/Scoreboard.jsx'
-import SessionPrompt from './components/SessionPrompt.jsx'
-import {
-  clearSavedSession,
-  loadSavedSession,
-  saveSession,
-} from './sessionStorage.js'
 import './App.css'
 
-function hasSessionProgress({ game, scoreboard }) {
-  return (
-    game.moves.length > 0 ||
-    game.mode !== TWO_PLAYER ||
-    scoreboard.X > 0 ||
-    scoreboard.O > 0 ||
-    scoreboard.draws > 0
-  )
-}
-
 function App() {
-  const [initialSession] = useState(loadSavedSession)
-  const [state, dispatch] = useReducer(
-    appReducer,
-    initialSession.savedState ?? createAppState(),
-  )
-  const [sessionReady, setSessionReady] = useState(
-    initialSession.status === 'none',
-  )
-  const [storageError, setStorageError] = useState(initialSession.error)
+  const [state, dispatch] = useReducer(appReducer, undefined, createAppState)
   const { game, scoreboard } = state
   const computerTurn =
     game.mode === COMPUTER &&
@@ -49,80 +24,18 @@ function App() {
     game.status === IN_PROGRESS
   const isGameOver = game.status !== IN_PROGRESS
 
-  const updateState = useCallback((action) => {
-    const nextState = appReducer(state, action)
-    dispatch(action)
-
-    if (!sessionReady) return
-
-    try {
-      if (hasSessionProgress(nextState)) {
-        saveSession(nextState)
-      } else {
-        clearSavedSession()
-      }
-      setStorageError('')
-    } catch (error) {
-      setStorageError(error.message)
-    }
-  }, [dispatch, sessionReady, state])
-
   useEffect(() => {
-    if (!sessionReady || !computerTurn) return undefined
+    if (!computerTurn) return undefined
 
     const timer = window.setTimeout(() => {
       const cellIndex = chooseComputerMove(game.board)
       if (cellIndex !== null) {
-        updateState({ type: 'move', player: 'O', cellIndex })
+        dispatch({ type: 'move', player: 'O', cellIndex })
       }
     }, 420)
 
     return () => window.clearTimeout(timer)
-  }, [computerTurn, game.board, sessionReady, updateState])
-
-  useEffect(() => {
-    if (!sessionReady) return undefined
-
-    if (!hasSessionProgress(state)) return undefined
-
-    function confirmLeave(event) {
-      try {
-        saveSession(state)
-      } catch (error) {
-        setStorageError(error.message)
-      }
-
-      event.preventDefault()
-      event.returnValue = ''
-    }
-
-    window.addEventListener('beforeunload', confirmLeave)
-    return () => window.removeEventListener('beforeunload', confirmLeave)
-  }, [game.mode, game.moves.length, scoreboard, sessionReady, state])
-
-  function continueSavedSession() {
-    setSessionReady(true)
-  }
-
-  function startFreshSession() {
-    let nextState = appReducer(state, { type: 'reset-game' })
-    nextState = appReducer(nextState, { type: 'reset-scoreboard' })
-    dispatch({ type: 'reset-game' })
-    dispatch({ type: 'reset-scoreboard' })
-
-    try {
-      clearSavedSession()
-      setStorageError('')
-    } catch (error) {
-      try {
-        saveSession(nextState)
-        setStorageError('')
-      } catch (saveError) {
-        setStorageError(`${error.message} ${saveError.message}`)
-      }
-    }
-    setSessionReady(true)
-  }
+  }, [computerTurn, game.board])
 
   const statusMessage =
     game.status === WON
@@ -150,11 +63,6 @@ function App() {
           Local game session
         </span>
       </header>
-      {storageError && (
-        <p className="storage-notice" role="alert">
-          {storageError}
-        </p>
-      )}
 
       <section className="game-layout" aria-label="Tic Tac Toe game">
         <div className="play-column">
@@ -172,14 +80,14 @@ function App() {
             isGameOver={isGameOver}
             statusMessage={statusMessage}
             onMove={(player, cellIndex) =>
-              updateState({ type: 'move', player, cellIndex })
+              dispatch({ type: 'move', player, cellIndex })
             }
-            onReset={() => updateState({ type: 'reset-game' })}
-            onUndo={() => updateState({ type: 'undo' })}
+            onReset={() => dispatch({ type: 'reset-game' })}
+            onUndo={() => dispatch({ type: 'undo' })}
           />
           <GameModeSelector
             mode={game.mode}
-            onSelect={(mode) => updateState({ type: 'set-mode', mode })}
+            onSelect={(mode) => dispatch({ type: 'set-mode', mode })}
           />
         </div>
 
@@ -187,7 +95,7 @@ function App() {
           <Scoreboard
             scoreboard={scoreboard}
             mode={game.mode}
-            onReset={() => updateState({ type: 'reset-scoreboard' })}
+            onReset={() => dispatch({ type: 'reset-scoreboard' })}
           />
           <MoveHistory game={game} isGameOver={isGameOver} />
           <p className="friendly-note">
@@ -205,14 +113,7 @@ function App() {
       <ResultDialog
         game={game}
         scoreboard={scoreboard}
-        enabled={sessionReady}
-        onPlayAgain={() => updateState({ type: 'reset-game' })}
-      />
-      <SessionPrompt
-        status={sessionReady ? 'none' : initialSession.status}
-        error={storageError}
-        onContinue={continueSavedSession}
-        onStartFresh={startFreshSession}
+        onPlayAgain={() => dispatch({ type: 'reset-game' })}
       />
     </main>
   )
