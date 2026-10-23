@@ -1,121 +1,121 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useReducer } from 'react'
+import {
+  appReducer,
+  chooseComputerMove,
+  COMPUTER,
+  createAppState,
+  DRAW,
+  IN_PROGRESS,
+  WON,
+} from './game.js'
+import GameBoard from './components/GameBoard.jsx'
+import GameModeSelector from './components/GameModeSelector.jsx'
+import MoveHistory from './components/MoveHistory.jsx'
+import ResultDialog from './components/ResultDialog.jsx'
+import Scoreboard from './components/Scoreboard.jsx'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [state, dispatch] = useReducer(appReducer, undefined, createAppState)
+  const { game, scoreboard } = state
+  const computerTurn =
+    game.mode === COMPUTER &&
+    game.currentPlayer === 'O' &&
+    game.status === IN_PROGRESS
+  const isGameOver = game.status !== IN_PROGRESS
+
+  useEffect(() => {
+    if (!computerTurn) return undefined
+
+    const timer = window.setTimeout(() => {
+      const cellIndex = chooseComputerMove(game.board)
+      if (cellIndex !== null) {
+        dispatch({ type: 'move', player: 'O', cellIndex })
+      }
+    }, 420)
+
+    return () => window.clearTimeout(timer)
+  }, [computerTurn, game.board])
+
+  const statusMessage =
+    game.status === WON
+      ? game.mode === COMPUTER && game.winner === 'O'
+        ? 'The computer wins this round.'
+        : `Player ${game.winner} wins this round!`
+      : game.status === DRAW
+        ? 'A draw. Nicely played.'
+        : computerTurn
+          ? 'Computer is thinking…'
+          : `Player ${game.currentPlayer}'s turn`
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="app-shell">
+      <header className="topbar">
+        <a className="brand" href="/" aria-label="Tic Tac Toe home">
+          <span className="brand-mark" aria-hidden="true">
+            <span>X</span>
+            <span>O</span>
+          </span>
+          <span>tic tac toe</span>
+        </a>
+        <span className="session-label">
+          <span className="session-dot" />
+          Local game session
+        </span>
+      </header>
+
+      <section className="game-layout" aria-label="Tic Tac Toe game">
+        <div className="play-column">
+          <div className="intro">
+            <p className="eyebrow">THE CLASSIC, REIMAGINED</p>
+            <h1>A little friendly<br />competition.</h1>
+            <p className="intro-copy">
+              Take turns, think ahead, and make your mark.
+            </p>
+          </div>
+
+          <GameBoard
+            game={game}
+            computerTurn={computerTurn}
+            isGameOver={isGameOver}
+            statusMessage={statusMessage}
+            onMove={(player, cellIndex) =>
+              dispatch({ type: 'move', player, cellIndex })
+            }
+            onReset={() => dispatch({ type: 'reset-game' })}
+            onUndo={() => dispatch({ type: 'undo' })}
+          />
+          <GameModeSelector
+            mode={game.mode}
+            onSelect={(mode) => dispatch({ type: 'set-mode', mode })}
+          />
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+
+        <aside className="side-column">
+          <Scoreboard
+            scoreboard={scoreboard}
+            mode={game.mode}
+            onReset={() => dispatch({ type: 'reset-scoreboard' })}
+          />
+          <MoveHistory game={game} isGameOver={isGameOver} />
+          <p className="friendly-note">
+            <span aria-hidden="true">✳</span>
+            Good games are made one move at a time.
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        </aside>
       </section>
 
-      <div className="ticks"></div>
+      <footer className="page-footer">
+        <span>Made for the love of the game.</span>
+        <span>Play fair. Have fun.</span>
+      </footer>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <ResultDialog
+        game={game}
+        scoreboard={scoreboard}
+        onPlayAgain={() => dispatch({ type: 'reset-game' })}
+      />
+    </main>
   )
 }
 
